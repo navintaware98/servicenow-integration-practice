@@ -1,0 +1,96 @@
+## Mock Interview Q&A — Session Recap
+
+### Rapid-Fire Fundamentals
+
+**Q: Difference between REST Message and Scripted REST API?**
+A: REST Message is outbound — ServiceNow initiates the call. Scripted REST 
+API is inbound — ServiceNow receives the call, and I control the logic and 
+response shape myself.
+
+**Q: What does GlideRecord's insert() do and return?**
+A: Writes the record to the database and returns the new record's sys_id.
+
+**Q: Difference between 401 and 403?**
+A: 401 = not authenticated at all (invalid/missing credentials). 403 = 
+authenticated successfully, but not authorized to perform this specific 
+action (e.g., blocked by an ACL).
+
+**Q: In a Scripted REST API, how do you access POST body data vs. a query 
+parameter?**
+A: POST body → request.body.data (parsed JSON object). Query parameter → 
+request.queryParams.paramName (reads values after ? in the URL, e.g. 
+?number=INC0010042 → request.queryParams.number).
+
+**Q: Table API vs Import Set API — when to use which?**
+A: Table API for real-time, single-record CRUD with no custom logic needed. 
+Import Set API for bulk/batch loads that need a staging buffer, validation, 
+and coalesce logic to avoid duplicates on repeated imports.
+
+**Q: PUT vs POST?**
+A: POST creates a new record — no ID in the URL, since it doesn't exist 
+yet. PUT updates an existing record — the sys_id must be in the URL, since 
+you're targeting something that already exists.
+
+**Q: What is curl and why use it over Postman?**
+A: A command-line HTTP client. With -v (verbose), it shows the actual raw 
+request/response at the HTTP level — useful for isolating whether an issue 
+is tool-specific (Postman) or a genuine server-side/platform problem.
+
+### STAR Debugging Stories
+
+1. **Basic Auth failure → OAuth 2.0 pivot:** Basic Auth failed 401 across 
+   multiple accounts/passwords despite correct credentials. Used curl -v to 
+   confirm the Authorization header was reaching the server correctly 
+   (ruling out network/proxy issues). Consistent failure across fresh 
+   accounts pointed to a platform-level block (likely MFA enforcement on a 
+   Zurich-release PDI). Pivoted to OAuth 2.0 Password Credentials grant — 
+   authenticated successfully.
+
+2. **OAuth Scope Restriction blocking cross-scope access:** After OAuth 
+   worked, a call to a Global-scope Scripted REST API returned 403 — 
+   "Access to unscoped api is not allowed." Traced to the OAuth Application 
+   Registry's 'Scope Restriction' field defaulting to a setting that blocks 
+   cross-scope access. Changed it to 'Broadly Scoped,' generated a fresh 
+   token, resolved. Understood this as a deliberate security boundary 
+   preventing scoped OAuth clients from silently reaching unrelated parts 
+   of the instance.
+
+3. **Import Set API — success response, silently empty data:** POSTed data 
+   into a custom staging table via the Import Set API, got 201 Created with 
+   a record_link implying success. Verified the actual target record 
+   directly — found every field blank. Root cause: staging table's real 
+   column names used a 'u_' prefix that didn't match the plain field names 
+   sent in the payload. Fixed the payload, verified real data landed, 
+   cleaned up the orphaned empty record. Key lesson: a success status code 
+   doesn't guarantee correct downstream data in multi-stage integrations — 
+   always verify the actual end state.
+
+### Scenario / Design Question
+
+**Q: Design a Business Rule that fires when Incident priority changes to 
+Critical — notify a manager and update a related field. Approach?**
+A: Async After Business Rule on Incident, condition using 
+current.priority.changesTo('1') — not == — so it only fires on the actual 
+transition, not every save of an already-critical incident. Update the 
+related record via GlideRecord (query, set field, update()). For 
+notification, avoid sending email directly in script — instead fire a 
+custom event via gs.eventQueue(), with a Notification record configured to 
+listen for that event and handle the email. Keeps "detecting the 
+condition" separate from "how the message is sent," which is more 
+maintainable.
+
+### Self-Introduction (practiced version)
+
+"I'm Navin, a ServiceNow developer with about 4.5 years of experience. I 
+currently work at Smartenit's Software Innovation, where I'm focused on 
+ITSM and HRSD — developing and customizing incident/request processes as 
+well as HR service delivery workflows. Over the years I've built strong 
+scripting fundamentals — GlideRecord, GlideAjax, Script Includes, Business 
+Rules, Client Scripts, ACLs — and I've also worked across Flow Designer, 
+integrations, and some ITOM exposure including CMDB and Discovery. 
+Recently I've been deepening my integrations knowledge specifically — REST 
+and SOAP fundamentals, OAuth and Basic Auth, Scripted REST APIs, Table API, 
+and Import Sets — including some real hands-on debugging that's sharpened 
+how I approach troubleshooting integration issues. I'm looking to move 
+into a senior developer role where I can take on more ownership of 
+integration architecture and complex customizations."
