@@ -1,0 +1,19 @@
+## Quick Reference: Which Endpoint/URL for Which Integration Method
+
+| Method                | Direction | Typical URL Pattern                                      | Notes |
+|------------------------|-----------|-----------------------------------------------------------|-------|
+| REST Message           | Outbound  | Whatever the EXTERNAL system's endpoint is (set on the REST Message record) | ServiceNow is the caller; URL belongs to the other system, not ServiceNow |
+| Scripted REST API      | Inbound   | https://instance.service-now.com/api/{namespace}/{api_id}/{resource_path} | Custom-built by us; namespace + api_id come from the Scripted REST API record; resource_path is whatever we define (e.g. /hello, /create-incident) |
+| Table API               | Inbound   | https://instance.service-now.com/api/now/table/{table_name}(/{sys_id}) | Built into every table automatically. No sys_id for GET(list)/POST; sys_id required for PUT/DELETE/GET(single) |
+| Import Set API          | Inbound   | https://instance.service-now.com/api/now/import/{staging_table_name} | Posts into a STAGING table, not the real target — Transform Map moves it onward (auto-runs on insert via this API) |
+| OAuth Token Endpoint    | N/A (auth)| https://instance.service-now.com/oauth_token.do | Fixed, standard path on every instance — not configured, just used |
+
+**How to tell which one to use, quickly:**
+- Need to call OUT to another system? → REST Message
+- Need to expose YOUR OWN custom logic/endpoint for others to call? → 
+  Scripted REST API
+- Need generic, no-custom-logic CRUD on a standard/custom table? → Table API
+- Need to bulk-load or feed data through an existing Transform Map (staging 
+  buffer, coalesce logic)? → Import Set API
+- Need a token before calling any of the above (if using OAuth)? → 
+  oauth_token.do first, then attach the token to whichever call above
