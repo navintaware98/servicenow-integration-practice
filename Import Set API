@@ -1,0 +1,33 @@
+## Import Set API — Debugging Journey
+
+**Goal:** Insert data directly into a staging table via REST (bypassing 
+manual CSV upload), and confirm it flows through the existing Transform Map 
+into the real target table.
+
+**Steps:**
+1. POSTed a JSON payload to /api/now/import/{staging_table_name} with keys 
+   full_name, email, department, employee_id.
+2. Got 201 Created, response included a record_link pointing to the 
+   supposedly-created record in u_employee_import.
+3. Checked u_employee_import.list — found a row with all fields blank.
+
+**Debugging:**
+- Used the record_link from the API response directly in a GET request — 
+  confirmed via sys_id that this WAS the correct record, but every field 
+  was genuinely empty ("").
+- Root cause: the staging table's actual column names use a 'u_' prefix 
+  (u_full_name, u_email, etc.) — same convention as the target table. My 
+  POST body used plain keys (full_name, email) that didn't match, so 
+  nothing copied into staging correctly, and the Transform Map had nothing 
+  valid to map from.
+- Fix: corrected the JSON payload to use u_-prefixed keys matching the 
+  staging table exactly. Re-sent — data landed correctly this time.
+- Cleaned up the orphaned empty record left behind by the first attempt.
+
+**Key takeaway:** A successful HTTP status code (201/200) only confirms the 
+API call itself succeeded — it does NOT guarantee the data ended up correct 
+downstream, especially in multi-stage flows like Import Sets. Always verify 
+the actual end result, not just the immediate response. Also: always check 
+a staging/target table's real column names (not assumed ones) before 
+sending a payload — field name mismatches fail silently here rather than 
+throwing an error.
