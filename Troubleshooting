@@ -1,0 +1,17 @@
+Status code triage: 401 vs 403 vs 400 vs 404 vs 500
+401 = wrong/missing/rejected credentials (auth problem itself). 403 = credentials are fine, but not allowed to do THIS action (authorization/ACL problem). 400 = malformed or missing required data in the request (caller's fault). 404 = valid request, but the resource/record doesn't exist. 500 = something broke on ServiceNow's side (script error, unhandled exception). Knowing this distinction lets you immediately narrow down where to look — auth config vs ACLs vs request body vs server-side script.
+2
+Isolate: is it the message/API config, the auth, or the ACL?
+For REST Message (outbound) issues: check the REST Message record's endpoint/auth profile is correct, use the 'Test' related link to isolate whether the problem is the message config or the calling script. For Scripted REST API (inbound) issues: check the Resource's script for logical errors, check Default ACLs and any Resource-level ACL overrides, and check 'Requires authentication'/'Requires ACL authorization' checkboxes on the Resource. Today's real example: a REST call failing wasn't a credentials problem at all — it was an OAuth Application Registry's Scope Restriction blocking cross-scope access to a Global-scope API.
+3
+ECC Queue — only relevant for MID Server-routed traffic
+ECC Queue (System Definition > ECC Queue, or search 'ECC Queue') logs communication between ServiceNow and MID Server-routed integrations — useful specifically for Discovery, Orchestration, or any MID-Server-based integration, not for direct REST/SOAP calls made straight from the instance (those don't route through ECC Queue).
+4
+Use curl -v to strip away tool-specific noise
+curl -v (verbose mode) shows the ACTUAL request/response at the HTTP level — including whether an Authorization header is really being sent, and the server's real response headers. Today's real example: using curl -v proved the Authorization header WAS reaching the server correctly, which ruled out a network/proxy problem and pointed us toward a genuine platform-level auth rejection instead — saving time by eliminating a wrong theory quickly.
+5
+Success response ≠ correct data — always verify the end result
+A 'successful' response code (200/201) only confirms the API call itself worked — it does NOT guarantee the data ended up correct on the other end, especially in multi-stage flows like Import Sets. Today's real example: a 201 Created response included a record_link, but the actual target record had every field blank, due to a field-name mismatch between the payload and the staging table's real column names. Always verify the END RESULT, not just the immediate response.
+6
+Pattern recognition: when to stop chasing one theory
+Basic Auth failing consistently across MULTIPLE different valid accounts and passwords is a strong signal of a platform-level block (e.g., MFA enforcement), not a credentials problem — don't keep resetting passwords past that point. If a downstream/staging record ends up empty despite a success response, suspect a field-name mismatch between what was sent and what the table actually expects, not a logic error in the Transform Map itself.
