@@ -1,0 +1,21 @@
+1. What is Table API?
+
+"The Table API is a built-in, generic REST API that ServiceNow automatically exposes for every table — standard or custom — without any setup. It lets external systems perform full CRUD operations — GET, POST, PUT, DELETE — directly against a table using a predictable URL pattern: /api/now/table/{table_name}, with the record's sys_id appended for operations on a specific record. It's the fastest way to integrate when you just need direct, real-time access to a table's data with no custom business logic in between."
+
+2. What is Import Set API?
+
+"The Import Set API is used for bulk or batch data loading. Instead of writing directly to a target table, you POST data into a staging table first — the same staging table that a manual CSV/Excel import (Load Data) would use. A Transform Map then defines how staging fields map to the real target table, and this mapping runs automatically when data is inserted via the API. This two-stage design protects live data — bad or malformed data gets caught in staging rather than corrupting the real table directly. It's the right choice when you're doing bulk syncs, migrations, or repeated batch loads, especially when you need coalesce logic to update existing records instead of creating duplicates."
+
+3. What is Scripted REST API?
+
+"A Scripted REST API is a custom-built REST endpoint where I write the logic myself — what data is required, what validation runs, what defaults apply, and exactly what the response looks like. Unlike the Table API, which exposes raw table access, a Scripted REST API lets me design a deliberate, purpose-built contract for external systems — for example, validating required fields before creating a record, or returning only specific fields instead of the entire raw record. It's the right tool when I need business logic, security control, or a simplified interface that hides ServiceNow's internal structure from the caller."
+
+4. When to use which? (the comparison answer — often asked as a follow-up)
+
+"It comes down to three questions: Is it real-time or batch? Do I need custom logic? And how much control do I need over the interface?
+
+If it's a simple, real-time, one-record-at-a-time operation with no special logic — Table API.
+If it's bulk or batch data, especially recurring loads where I need staging, validation, and coalesce-based updates — Import Set API.
+If I need custom business logic, validation, security, or a clean abstracted interface for external callers — Scripted REST API.
+
+In practice, on real projects, I'd default to Table API for quick internal integrations, but for anything customer-facing or business-critical, I'd build a Scripted REST API so I control exactly what's exposed and how it behaves."
