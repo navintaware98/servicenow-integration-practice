@@ -28,3 +28,9 @@ integration_user) and multiple passwords.
 accounts is a strong signal of a platform-level block (e.g., MFA), not a 
 credentials problem. OAuth 2.0 is also the more production-realistic 
 approach anyway.
+
+
+
+The fix — same content, told as a flowing story:
+
+"Sure — I was testing a custom Scripted REST API using Basic Auth in Postman, and it kept failing with a 401, even though I was confident the credentials were correct. Rather than just re-trying passwords, I wanted to isolate where exactly it was failing. First I checked the obvious things — the ACL config, whether the account was locked — both were fine. Then I used curl in verbose mode to actually see the raw HTTP request, which confirmed the Authorization header WAS reaching the server correctly — so it wasn't a network or proxy issue swallowing it. The server's own response said 'Basic authentication problem, ignoring' — a genuine rejection, not a transport failure. At that point I tested with a completely fresh user account and a freshly generated password, and got the exact same failure — which told me this wasn't about any one account's credentials, it was something blocking Basic Auth platform-wide, most likely MFA enforcement, since this was a newer Zurich-release PDI. Rather than keep fighting that, I pivoted to OAuth 2.0 — set up an Application Registry, configured a password grant in Postman, and that authenticated successfully. It also happens to be the more production-realistic approach anyway."
